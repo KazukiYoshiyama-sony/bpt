@@ -1,3 +1,5 @@
+import json
+import time
 import yaml
 import torch
 import os
@@ -76,10 +78,12 @@ if __name__ == '__main__':
         shuffle = False,
     )
 
+    et_list = []
     os.makedirs(args.output_path, exist_ok=True)
     with torch.no_grad():
         for it, data in enumerate(dataloader):
             if args.condition == 'pc':
+                st = time.perf_counter()
                 # generate codes with model
                 codes = model.generate(
                     batch_size = args.batch_size,
@@ -89,6 +93,8 @@ if __name__ == '__main__':
                     filter_kwargs = dict(k=50, p=0.95),
                     return_codes=True,
                 )
+                et = time.perf_counter() - st
+                et_list.append([data['uid'][0], et])
 
             coords = []
             try:
@@ -104,7 +110,7 @@ if __name__ == '__main__':
                     )
                     coords.append(vertices)
             except:
-                coords.append(np.zeros(3, 3))
+                coords.append(np.zeros((3, 3)))
 
             # convert coordinates to mesh
             for i in range(args.batch_size):
@@ -124,3 +130,7 @@ if __name__ == '__main__':
                     pcd = data['pc_normal'][i].cpu().numpy()
                     point_cloud = trimesh.points.PointCloud(pcd[..., 0:3])
                     point_cloud.export(f'{args.output_path}/{uid}_pc.ply', "ply")
+    
+    print(et_list)
+    with open(f"./elapsed_time_bpt.json", "w") as fp:
+        json.dump(et_list, fp)
