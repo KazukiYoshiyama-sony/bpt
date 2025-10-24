@@ -200,10 +200,17 @@ class MeshTransformer(Module):
                 logits = output
 
             # sample code from logits
-            logits = logits[:, -1]
+            logits = logits[:, -1].clamp(-1e2, 1e2)
             filtered_logits = filter_logits_fn(logits, **filter_kwargs)
             probs = F.softmax(filtered_logits / temperature, dim = -1)
             sample = torch.multinomial(probs, 1)
+            # def gumbel_sample(logits, temperature=1.0):
+            #     temperature = max(float(temperature), 1e-6)
+            #     m = logits.max(dim=-1, keepdim=True).values
+            #     z = (logits - m) / temperature
+            #     g = -torch.log(-torch.log(torch.rand_like(z).clamp_min(1e-12)).clamp_min(1e-12))
+            #     return (z + g).argmax(dim=-1, keepdim=True)  # [B,1]
+            # sample = gumbel_sample(logits)
             codes, _ = pack([codes, sample], 'b *')
 
             # check for all rows to have [eos] to terminate
