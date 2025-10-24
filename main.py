@@ -82,19 +82,34 @@ if __name__ == '__main__':
     os.makedirs(args.output_path, exist_ok=True)
     with torch.no_grad():
         for it, data in enumerate(dataloader):
-            if args.condition == 'pc':
-                st = time.perf_counter()
-                # generate codes with model
-                codes = model.generate(
-                    batch_size = args.batch_size,
-                    temperature = args.temperature,
-                    pc = data['pc_normal'].cuda().half(),
-                    filter_logits_fn = joint_filter,
-                    filter_kwargs = dict(k=50, p=0.95),
-                    return_codes=True,
-                )
-                et = time.perf_counter() - st
-                et_list.append([data['uid'][0], et])
+
+            if os.path.exists(f"{args.output_path}/{data['uid'][0]}_mesh.obj"):
+                print(f"Skip {args.output_path}/{data['uid'][0]}_mesh.obj")
+                continue
+
+            print(f"Processing: {data['uid']}")
+
+            try:
+                if args.condition == 'pc':
+                    st = time.perf_counter()
+                    # generate codes with model
+                    codes = model.generate(
+                        batch_size = args.batch_size,
+                        temperature = args.temperature,
+                        pc = data['pc_normal'].cuda().half(),
+                        filter_logits_fn = joint_filter,
+                        filter_kwargs = dict(k=50, p=0.95),
+                        return_codes=True,
+                    )
+                    et = time.perf_counter() - st
+                    et_list.append([data['uid'][0], et])
+            except Exception as e:
+                # NOTE: 
+                # sometime, we got `RuntimeError: probability tensor contains either `inf`, `nan` or element < 0`
+                # even if we handle by x.nan_to_num(...)
+                print(data['uid'][0])
+                print(e)
+                continue
 
             coords = []
             try:
