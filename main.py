@@ -78,7 +78,6 @@ if __name__ == '__main__':
         shuffle = False,
     )
 
-    et_list = []
     os.makedirs(args.output_path, exist_ok=True)
     with torch.no_grad():
         for it, data in enumerate(dataloader):
@@ -102,7 +101,9 @@ if __name__ == '__main__':
                         return_codes=True,
                     )
                     et = time.perf_counter() - st
-                    et_list.append([data['uid'][0], et])
+                    with open(f"{args.output_path}/et_{data['uid'][0]}.json", "w") as fp:
+                        json.dump({"elapsed_time": et}, fp)
+
             except Exception as e:
                 # NOTE: 
                 # sometime, we got `RuntimeError: probability tensor contains either `inf`, `nan` or element < 0`
@@ -145,7 +146,3 @@ if __name__ == '__main__':
                     pcd = data['pc_normal'][i].cpu().numpy()
                     point_cloud = trimesh.points.PointCloud(pcd[..., 0:3])
                     point_cloud.export(f'{args.output_path}/{uid}_pc.ply', "ply")
-    
-    print(et_list)
-    with open(f"./elapsed_time_bpt.json", "w") as fp:
-        json.dump(et_list, fp)
